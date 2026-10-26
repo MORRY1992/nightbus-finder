@@ -1,0 +1,12 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[2]||'public/index.html','utf8'),script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const funcs=[...script.matchAll(/function (integer|date|conditions|pricePlan)\([^]*?(?=\nfunction |\nfor\(|\nconst |\nform\.|\nsearch\.|\ncompare\.|\n\$\(|$)/g)].map(x=>x[0]);
+const c=vm.createContext({});vm.runInContext("const seats={any:'指定なし',four:'4列',three:'3列独立',other:'その他・不明'};"+funcs.join('\n'),c);
+c.route={from:'東京',to:'大阪',date:'2026-12-31',time:'',passengers:'2',seat:'any'};
+c.plan={a_name:'A',a_seat:'other',a_price:'4000',a_fees:'200',a_luggage:'0',a_transfer:'1000',a_discount:'500',a_depart:'24:20',a_arrival:'2027-01-01T07:00'};
+let n=0;const ok=s=>{assert.ok(vm.runInContext(s,c),s);n++},bad=s=>{assert.throws(()=>vm.runInContext(s,c),s);n++};
+ok("pricePlan(plan,'a',conditions(route)).duration===400");ok("pricePlan(plan,'a',conditions(route)).cash===8700");
+ok("pricePlan({...plan,a_depart:'',a_arrival:''},'a',conditions(route)).duration===null");
+bad("pricePlan({...plan,a_depart:''},'a',conditions(route))");bad("pricePlan({...plan,a_arrival:'2026-12-31T07:00'},'a',conditions(route))");bad("pricePlan({...plan,a_arrival:'2027-01-03T07:00'},'a',conditions(route))");bad("pricePlan({...plan,a_arrival:'2027-02-30T07:00'},'a',conditions(route))");bad("pricePlan({...plan,a_depart:'30:00'},'a',conditions(route))");
+ok("pricePlan({...plan,a_depart:'23:30',a_arrival:'2027-01-01T07:30'},'a',conditions(route)).duration===480");
+console.log(n+' overnight duration checks passed');
