@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nightbus-finder.pages.dev/sitemap.xml
